@@ -1,0 +1,12 @@
+$body-color: red;
+
+h3 {
+  color: $body-color;
+}
+.box {
+  width: 550px;
+  height: 200px;
+  background-size: cover;
+  background: url('/src/images/google.png');
+  background-color: black;
+}
