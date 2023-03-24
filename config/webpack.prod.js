@@ -4,6 +4,13 @@ const ESLintPlugin = require('eslint-webpack-plugin')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin')
+const ThreserWebpackPlugins = require('terser-webpack-plugin')
+const WorkboxPlugin = require('workbox-webpack-plugin')
+
+// const PreloadWebpackPlugin = require('preload-webpack-plugin')
+// const ImageMinimizerPlugin = require('image-minimizer-webpack-plugin')
+const os = require('os')
+const threads = os.cpus().length // cpu 的核数
 const getStylesLoader = (pre) => {
   return [
     MiniCssExtractPlugin.loader,
@@ -26,10 +33,14 @@ module.exports = {
   output: {
     // 文件的输出路径，
     path: path.resolve(__dirname, '../dist'),
-    // 文件名 只是 entry 的文件
-    filename: undefined, // 绝对路径
     // 在 打包前清空 dist 目录
     clean: true,
+    // 文件名 只是 entry 的文件
+    filename: 'static/js/[name].js', // 绝对路径
+    // 打包生成的其他名字
+    chunkFilename: 'static/js/[name].chunk.js',
+    // 统一对其他资源进行处理
+    assetModuleFilename: 'static/media/[hash:10][ext]',
   },
   //   加载器
   module: {
@@ -59,25 +70,39 @@ module.exports = {
             maxSize: 10 * 1024,
           },
         },
-        generator: {
-          filename: 'static/image/[hash:10][ext]',
-        },
+        // generator: {
+        //   filename: 'static/image/[hash:10][ext]',
+        // },
       },
       // iconfont 打包处理·
       {
         test: /\.(ttf|woff2?)/,
         type: 'asset/resource',
-        generator: {
-          filename: 'static/media/[hash:10][ext]',
-        },
+        // generator: {
+        //   filename: 'static/media/[hash:10][ext]',
+        // },
       },
       {
         test: /\.js$/,
-        exclude: /node_modules/, // 排除 排除node_module 文件不做处理
-        loader: 'babel-loader',
-        // options: {
-        //   presets: ['@babel/preset-env'],
-        // },
+        // exclude: 'node_modules', // 排除 排除node_module 文件不做处理
+        include: path.resolve(__dirname, '../src'),
+        use: [
+          {
+            loader: 'thread-loader', // 开启多进程
+            options: {
+              works: threads, // 进程数量
+            },
+          },
+          {
+            loader: 'babel-loader',
+            options: {
+              // presets: ['@babel/preset-env'],
+              cacheDirectory: true, // 开启bable 缓存
+              cacheCompression: true, // 关闭缓存文件压缩
+              plugins: ['@babel/plugin-transform-runtime'],
+            },
+          },
+        ],
       },
     ],
   },
@@ -86,15 +111,80 @@ module.exports = {
     new ESLintPlugin({
       //  检测那些文件
       context: path.resolve(__dirname, '../src'),
+      exclude: 'node_modules',
+      cacheLocation: path.resolve(
+        __dirname,
+        '../node_modules/.cache/eslintcache'
+      ),
+      threads,
     }),
     new HtmlWebpackPlugin({
       template: path.resolve(__dirname, '../public/index.html'),
     }),
     new MiniCssExtractPlugin({
-      filename: 'static/css/main.css',
+      filename: 'static/css/[name].css',
+      chunkFilename: 'static/css/[name].chunk.css',
     }),
     new CssMinimizerPlugin(),
+    // new ThreserWebpackPlugins({
+    //   parallel: threads,
+    // }),
+    // new ImageMinimizerPlugin({
+    //   minimizer: {
+    //     implementation: ImageMinimizerPlugin.imageminGenerate,
+    //     options: {
+    //       plugins: [
+    //         ['gifsicle', { interlaced: true }],
+    //         ['jpegtran', { progressive: true }],
+    //         ['optipng', { optimizationLevel: true }],
+    //         [
+    //           'svgo',
+    //           {
+    //             plugins: [
+    //               'preset-default',
+    //               'prefixIds',
+    //               {
+    //                 name: 'sortAttrs',
+    //                 params: {
+    //                   xmlnsOrder: 'alphabetical',
+    //                 },
+    //               },
+    //             ],
+    //           },
+    //         ],
+    //       ],
+    //     },
+    //   },
+    // }),
+    // new PreloadWebpackPlugin({
+    //   rel: 'preload',
+    //   as: 'script',
+    // }),
+    new WorkboxPlugin.GenerateSW({
+      clientsClaim: true,
+      skipWaiting: true,
+    }),
   ],
+
+  //  压缩
+  optimization: {
+    minimizer: [
+      new CssMinimizerPlugin(),
+      new ThreserWebpackPlugins({
+        parallel: threads,
+      }),
+    ],
+    // 代码分割操作
+    splitChunks: {
+      chunks: 'all',
+    },
+    // runtimeChunk: {
+    //   name: (entryoption) => `runtime~${entryoption}.js`,
+    // },
+    // 更改 打包后的互相依赖js的hash
+    runtimeChunk: true,
+  },
+
   //  webpack 本地 监听··· 开发环境下是没有输出的 也就是说 不会output
   // devServer: {
   //   host: 'localhost',
@@ -103,4 +193,5 @@ module.exports = {
   // },
   // 模式
   mode: 'production',
+  devtool: 'source-map',
 }
