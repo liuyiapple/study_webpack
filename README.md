@@ -338,7 +338,7 @@ optimization: {
 
 ## 7. NetWork cache
 
-
+处理打包后的文件名称
 
 
 
@@ -404,7 +404,28 @@ if ('serviceWorker' in navigator) {
 npm i serve -g 开启需要运行的目录即可
 ```
 
+# 总结
 
+1. 提升开发体验
+
+   使用 source map 让开发或者线上代码报错能更加准确的错误提示
+
+2. 提升webpack 的打包构建速度
+   1. 使用HotModuleReplcement 让开发时止重新编译已经修改的代码，不变的代码进行缓存
+   2. oneOf  资源文件一旦被某个loader 处理了，就不会再进行遍历了，打包速度更快
+   3. Include/Exclude 排除或者检测某些文件，处理文件更少，速度更快
+   4. cache 对 eslint 和babel 处理的结果进行缓存，让第二次打包速度等快
+   5. 视同Thead 多线程处理eslint 和babel 任务，但是处理多线程是需要开销的，但是也比代码处理使用效率更高
+3. 减少代码体积
+   1. 使用Three shaking 剔除没用的多余的代码
+   2. 使用@babel/plugin-transform-runtime  插件对babel处理，让辅助代码引入的更少
+   3. 使用 Image Minimizer 对图片进行压缩
+4. 优化代码运行性能
+   1. 使用 Code split 对代码进行分割成多个js文件，减少单个文件的大小，提高js的运行速度，并通过import 动态导入加载资源
+   2. 使用Preload 或者 Prefetch 对代码进行提前加载，等待未来使用时直接使用
+   3. 使用Network Cache 对输出的文件更好的命名，做好缓存
+   4. 使用 corejs 对js处理兼容性问题
+   5. 使用PWA 让代码离线也能访问，提升用户体验
 
 
 
